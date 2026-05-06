@@ -6,6 +6,7 @@ but the source records come from public ClinVar and HPO downloads.
 
 from __future__ import annotations
 
+import argparse
 import csv
 import gzip
 from collections import defaultdict
@@ -76,10 +77,25 @@ class GenePhenotype:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Build the small public ClinVar/HPO dataset subset."
+    )
+    parser.add_argument(
+        "--frequency-overrides",
+        help=(
+            "Optional CSV with variant_key and allele_frequency columns. "
+            "Use this to overlay local gnomAD-style frequencies without "
+            "downloading large gnomAD files into the repo."
+        ),
+    )
+    args = parser.parse_args()
+
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     REFERENCE_DIR.mkdir(parents=True, exist_ok=True)
 
     variants = collect_clinvar_variants()
+    if args.frequency_overrides:
+        variants = apply_frequency_overrides(variants, Path(args.frequency_overrides))
     phenotypes = collect_hpo_phenotypes()
     patient_terms = choose_patient_terms(phenotypes)
 
@@ -92,7 +108,13 @@ def main() -> None:
         phenotypes,
         REFERENCE_DIR / "gene_phenotype_mini.csv",
     )
-    write_source_notes(variants, phenotypes, patient_terms, OUTPUT_DIR / "SOURCE.md")
+    write_source_notes(
+        variants,
+        phenotypes,
+        patient_terms,
+        OUTPUT_DIR / "SOURCE.md",
+        frequency_override_path=args.frequency_overrides,
+    )
 
     print(f"Wrote {len(variants)} ClinVar variants to {OUTPUT_DIR}")
     print(f"Wrote {len(phenotypes)} HPO gene-phenotype rows to {REFERENCE_DIR}")
@@ -282,6 +304,40 @@ def parse_population_frequency_source(parsed_info: dict[str, str]) -> str:
         if parsed_info.get(key):
             return key
     return ""
+
+
+def apply_frequency_overrides(
+    variants: list[PublicVariant],
+    override_path: Path,
+) -> list[PublicVariant]:
+    overrides: dict[str, float] = {}
+    with override_path.open(encoding="utf-8", newline="") as handle:
+        for row in csv.DictReader(handle):
+            raw_frequency = row.get("allele_frequency", "")
+            if not raw_frequency:
+                continue
+            overrides[row["variant_key"]] = float(raw_frequency)
+
+    updated: list[PublicVariant] = []
+    for variant in variants:
+        if variant.key not in overrides:
+            updated.append(variant)
+            continue
+        updated.append(
+            PublicVariant(
+                chrom=variant.chrom,
+                pos=variant.pos,
+                ref=variant.ref,
+                alt=variant.alt,
+                gene=variant.gene,
+                consequence=variant.consequence,
+                clinical_significance=variant.clinical_significance,
+                condition=variant.condition,
+                allele_frequency=overrides[variant.key],
+                frequency_source="frequency_override",
+            )
+        )
+    return updated
 
 
 def clean_condition(condition: str) -> str:
@@ -475,6 +531,7 @@ def write_source_notes(
     phenotypes: list[GenePhenotype],
     patient_terms: list[str],
     path: Path,
+    frequency_override_path: str | None = None,
 ) -> None:
     path.write_text(
         "\n".join(
@@ -505,12 +562,14 @@ def write_source_notes(
                 "  selected genes",
                 "- reference/gnomad_mini.csv: population allele frequencies from",
                 "  ClinVar's embedded AF_EXAC, AF_TGP, or AF_ESP fields when present",
+                "  or from an optional --frequency-overrides CSV",
                 "- variant_labels.csv: public ClinVar-derived labels for the",
                 "  baseline ML workflow",
                 "",
                 f"Selected variants: {len(variants)}",
                 f"Selected gene-phenotype rows: {len(phenotypes)}",
                 f"Synthetic patient HPO terms: {', '.join(patient_terms)}",
+                f"Frequency override file: {frequency_override_path or 'none'}",
                 "",
             ]
         ),

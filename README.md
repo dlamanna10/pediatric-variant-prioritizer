@@ -66,6 +66,16 @@ Rebuild the public subset:
 python3 scripts/build_public_clinvar_dataset.py
 ```
 
+If you have a local gnomAD-style frequency table, overlay it without committing
+large files:
+
+```bash
+python3 scripts/build_public_clinvar_dataset.py \
+  --frequency-overrides path/to/frequency_overrides.csv
+```
+
+The override CSV should contain `variant_key` and `allele_frequency` columns.
+
 Run the pipeline on the public subset:
 
 ```bash
@@ -97,6 +107,20 @@ python3 scripts/build_dashboard.py \
   --predictions results/public_baseline_predictions.csv \
   --model-metrics results/public_baseline_model.json
 ```
+
+Generate a Markdown interpretation report:
+
+```bash
+python3 scripts/build_public_run_report.py
+```
+
+Or run the local public workflow end to end:
+
+```bash
+python3 scripts/run_public_workflow.py
+```
+
+Use `--refresh-public-data` to download and rebuild the public subset first.
 
 The public subset uses real ClinVar variants and real HPO gene-phenotype
 annotations. The patient HPO profile is still synthetic and is assembled from
@@ -134,6 +158,7 @@ Current demo metrics:
 
 - training accuracy: `1.000`
 - leave-one-out accuracy: `0.750`
+- precision/recall/F1/AUROC are written to the model JSON
 
 These metrics are only a smoke test of the workflow because the label set is
 tiny and synthetic.
@@ -234,6 +259,7 @@ data/reference/   Miniature ClinVar/gnomAD/HPO-style annotation tables
 dashboard/        Self-contained visual dashboard
 docs/             Beginner guide and README assets
 scripts/          Dashboard generator
+reports/          Generated Markdown interpretation reports
 tests/            Unit tests
 ```
 

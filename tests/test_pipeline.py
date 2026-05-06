@@ -1,8 +1,10 @@
 from pathlib import Path
 import csv
+import json
 import tempfile
 import unittest
 
+from scripts.build_public_run_report import render_report
 from pediatric_variant_prioritizer.cli import run
 from pediatric_variant_prioritizer.ml_baseline import run as train_baseline
 from pediatric_variant_prioritizer.scoring import rank_variants
@@ -103,6 +105,8 @@ class PipelineTest(unittest.TestCase):
             self.assertEqual(len(result.predictions), 4)
             self.assertGreater(len(result.feature_importance), 0)
             self.assertGreaterEqual(result.training_accuracy, 0.75)
+            self.assertIn("f1", result.metrics)
+            self.assertIn("auroc", result.metrics)
 
             probabilities = {
                 row["variant_key"]: row["predicted_probability"]
@@ -167,10 +171,46 @@ class PipelineTest(unittest.TestCase):
 
             self.assertEqual(len(result.predictions), 12)
             self.assertGreaterEqual(result.leave_one_out_accuracy, 0.75)
+            self.assertGreaterEqual(float(result.metrics["f1"]), 0.75)
             self.assertIn(
                 result.feature_importance[0]["feature"],
                 {"clinvar_score", "is_pathogenic_or_likely_pathogenic"},
             )
+
+    def test_public_report_renderer_summarizes_outputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "public_prioritized.csv"
+            features_output = Path(temp_dir) / "public_features.csv"
+            model_output = Path(temp_dir) / "public_model.json"
+            predictions_output = Path(temp_dir) / "public_predictions.csv"
+            importance_output = Path(temp_dir) / "public_importance.csv"
+
+            run(
+                str(ROOT / "data/public/clinvar_variants.vcf"),
+                str(ROOT / "data/public/patient_hpo.txt"),
+                str(ROOT / "data/public/reference"),
+                str(output),
+                str(features_output),
+            )
+            train_baseline(
+                str(features_output),
+                str(ROOT / "data/public/variant_labels.csv"),
+                str(model_output),
+                str(predictions_output),
+                str(importance_output),
+            )
+
+            report = render_report(
+                read_csv(output),
+                read_csv(predictions_output),
+                read_csv(importance_output),
+                json.loads(model_output.read_text(encoding="utf-8")),
+                (ROOT / "data/public/SOURCE.md").read_text(encoding="utf-8"),
+            )
+
+        self.assertIn("# Public Run Summary", report)
+        self.assertIn("Baseline ML Metrics", report)
+        self.assertIn("Top Feature Importance", report)
 
     def test_vcf_parser_can_read_vep_csq_and_snpeff_ann(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -198,3 +238,8 @@ class PipelineTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def read_csv(path: Path) -> list[dict[str, str]]:
+    with path.open(encoding="utf-8", newline="") as handle:
+        return list(csv.DictReader(handle))

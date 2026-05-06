@@ -75,16 +75,21 @@ def merge_predictions(
 
 def read_model_metrics(path: Path) -> dict[str, object]:
     payload = json.loads(path.read_text(encoding="utf-8"))
+    metrics = payload.get("metrics", {})
     return {
         "training_accuracy": float(payload.get("training_accuracy", 0.0)),
         "leave_one_out_accuracy": float(payload.get("leave_one_out_accuracy", 0.0)),
+        "precision": float(metrics.get("precision", 0.0)) if isinstance(metrics, dict) else 0.0,
+        "recall": float(metrics.get("recall", 0.0)) if isinstance(metrics, dict) else 0.0,
+        "f1": float(metrics.get("f1", 0.0)) if isinstance(metrics, dict) else 0.0,
+        "auroc": float(metrics.get("auroc", 0.0)) if isinstance(metrics, dict) else 0.0,
         "feature_importance": payload.get("feature_importance", []),
     }
 
 
 def render_dashboard(
     rows: list[dict[str, str]],
-    model_metrics: dict[str, float] | None = None,
+    model_metrics: dict[str, object] | None = None,
 ) -> str:
     payload = json.dumps(rows, indent=2)
     top = rows[0] if rows else {}
@@ -123,6 +128,7 @@ def render_dashboard(
     )
     feature_importance = model_metrics.get("feature_importance", [])
     importance_section = render_feature_importance(feature_importance)
+    interpretation_section = render_interpretation_section(top, model_metrics, ml_rows)
 
     return f"""<!doctype html>
 <html lang="en">
@@ -567,6 +573,7 @@ def render_dashboard(
       </div>
     </section>
     {importance_section}
+    {interpretation_section}
   </main>
 
   <script>
@@ -712,6 +719,38 @@ def render_feature_importance(feature_importance: object) -> str:
         </table>
       </div>
       <p class="small">Higher absolute coefficients have more influence in this tiny baseline model. Positive coefficients increase predicted candidate probability.</p>
+    </section>
+    """
+
+
+def render_interpretation_section(
+    top: dict[str, str],
+    model_metrics: dict[str, object],
+    ml_rows: list[dict[str, str]],
+) -> str:
+    if not top:
+        return ""
+
+    ml_copy = (
+        "Baseline ML predictions are shown because a prediction file was supplied."
+        if ml_rows
+        else "Baseline ML predictions are not shown for this dashboard build."
+    )
+    metric_copy = ""
+    if "f1" in model_metrics:
+        metric_copy = (
+            f" Training F1 is {float(model_metrics.get('f1', 0.0)):.3f}, "
+            f"AUROC is {float(model_metrics.get('auroc', 0.0)):.3f}, "
+            f"precision is {float(model_metrics.get('precision', 0.0)):.3f}, "
+            f"and recall is {float(model_metrics.get('recall', 0.0)):.3f}."
+        )
+
+    return f"""
+    <section class="panel">
+      <h2>How To Interpret This Run</h2>
+      <p>The top-ranked evidence candidate is <strong>{html.escape(top.get("gene", "NA"))}</strong> ({html.escape(top.get("variant_key", ""))}) with score <strong>{html.escape(top.get("score", "0"))}</strong>.</p>
+      <p>The evidence score is transparent and rule-based; it combines population frequency, consequence, ClinVar-style significance, phenotype overlap, and zygosity. The ML probability is a separate baseline model output trained from the exported feature table.</p>
+      <p>{html.escape(ml_copy + metric_copy)}</p>
     </section>
     """
 

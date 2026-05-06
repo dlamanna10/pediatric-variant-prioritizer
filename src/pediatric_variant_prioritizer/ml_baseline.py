@@ -37,6 +37,7 @@ class TrainingResult:
     model: LogisticModel
     training_accuracy: float
     leave_one_out_accuracy: float
+    metrics: dict[str, float | int]
     predictions: list[dict[str, str | float | int]]
     feature_importance: list[dict[str, str | float]]
 
@@ -74,7 +75,8 @@ def run(
     model = train_logistic_regression(matrix, targets, DEFAULT_FEATURES)
     probabilities = [predict_probability(model, row) for row in matrix]
     predictions = _prediction_rows(variant_keys, targets, probabilities)
-    training_accuracy = _accuracy(targets, probabilities)
+    metrics = calculate_classification_metrics(targets, probabilities)
+    training_accuracy = float(metrics["accuracy"])
     leave_one_out_accuracy = _leave_one_out_accuracy(matrix, targets)
     feature_importance = calculate_feature_importance(model)
 
@@ -82,6 +84,7 @@ def run(
         model=model,
         training_accuracy=training_accuracy,
         leave_one_out_accuracy=leave_one_out_accuracy,
+        metrics=metrics,
         predictions=predictions,
         feature_importance=feature_importance,
     )
@@ -147,6 +150,10 @@ def main() -> None:
     )
     print(f"Training accuracy: {result.training_accuracy:.3f}")
     print(f"Leave-one-out accuracy: {result.leave_one_out_accuracy:.3f}")
+    print(f"Precision: {result.metrics['precision']:.3f}")
+    print(f"Recall: {result.metrics['recall']:.3f}")
+    print(f"F1: {result.metrics['f1']:.3f}")
+    print(f"AUROC: {result.metrics['auroc']:.3f}")
     print(f"Wrote model to {Path(args.model_output)}")
     print(f"Wrote predictions to {Path(args.predictions_output)}")
     if args.importance_output:
@@ -171,6 +178,80 @@ def calculate_feature_importance(
         key=lambda row: float(row["absolute_coefficient"]),
         reverse=True,
     )
+
+
+def calculate_classification_metrics(
+    targets: list[int],
+    probabilities: list[float],
+) -> dict[str, float | int]:
+    true_positive = true_negative = false_positive = false_negative = 0
+    for target, probability in zip(targets, probabilities):
+        predicted = int(probability >= 0.5)
+        if target == 1 and predicted == 1:
+            true_positive += 1
+        elif target == 0 and predicted == 0:
+            true_negative += 1
+        elif target == 0 and predicted == 1:
+            false_positive += 1
+        elif target == 1 and predicted == 0:
+            false_negative += 1
+
+    total = len(targets)
+    accuracy = (true_positive + true_negative) / total if total else 0.0
+    precision_denominator = true_positive + false_positive
+    recall_denominator = true_positive + false_negative
+    precision = (
+        true_positive / precision_denominator
+        if precision_denominator
+        else 0.0
+    )
+    recall = (
+        true_positive / recall_denominator
+        if recall_denominator
+        else 0.0
+    )
+    f1 = (
+        2 * precision * recall / (precision + recall)
+        if precision + recall
+        else 0.0
+    )
+    return {
+        "accuracy": accuracy,
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "auroc": calculate_auroc(targets, probabilities),
+        "true_positive": true_positive,
+        "true_negative": true_negative,
+        "false_positive": false_positive,
+        "false_negative": false_negative,
+    }
+
+
+def calculate_auroc(targets: list[int], probabilities: list[float]) -> float:
+    positive_scores = [
+        probability
+        for target, probability in zip(targets, probabilities)
+        if target == 1
+    ]
+    negative_scores = [
+        probability
+        for target, probability in zip(targets, probabilities)
+        if target == 0
+    ]
+    if not positive_scores or not negative_scores:
+        return 0.0
+
+    wins = 0.0
+    comparisons = 0
+    for positive_score in positive_scores:
+        for negative_score in negative_scores:
+            comparisons += 1
+            if positive_score > negative_score:
+                wins += 1
+            elif positive_score == negative_score:
+                wins += 0.5
+    return wins / comparisons
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
@@ -258,6 +339,7 @@ def _write_model_json(result: TrainingResult, path: Path) -> None:
         "intercept": result.model.intercept,
         "training_accuracy": result.training_accuracy,
         "leave_one_out_accuracy": result.leave_one_out_accuracy,
+        "metrics": result.metrics,
         "feature_importance": result.feature_importance,
         "label_note": "Synthetic labels for workflow demonstration only",
     }
