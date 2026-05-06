@@ -1,0 +1,8 @@
+gene,hpo_id,phenotype
+SCN1A,HP:0001250,Seizure
+SCN1A,HP:0001263,Global developmental delay
+CFTR,HP:0002202,Bronchiectasis
+FBN1,HP:0001629,Ventricular septal defect
+FBN1,HP:0002616,Aortic root aneurysm
+TSC2,HP:0001250,Seizure
+TSC2,HP:0001263,Global developmental delay

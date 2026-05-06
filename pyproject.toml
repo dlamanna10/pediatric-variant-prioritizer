@@ -1,0 +1,19 @@
+[project]
+name = "pediatric-variant-prioritizer"
+version = "0.1.0"
+description = "Rare-disease variant prioritization from VCF and phenotype terms"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name = "Dominic" }
+]
+
+[project.scripts]
+prioritize-variants = "pediatric_variant_prioritizer.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

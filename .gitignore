@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.Rhistory
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+results/
+docs/beginner_guide.html
+dist/
+build/
+*.egg-info/
