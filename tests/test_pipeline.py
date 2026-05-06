@@ -109,6 +109,33 @@ class PipelineTest(unittest.TestCase):
                 probabilities["7-117559593-C-T"],
             )
 
+    def test_public_clinvar_hpo_subset_runs_through_pipeline(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "public_prioritized.csv"
+            features_output = Path(temp_dir) / "public_features.csv"
+
+            ranked_keys = run(
+                str(ROOT / "data/public/clinvar_variants.vcf"),
+                str(ROOT / "data/public/patient_hpo.txt"),
+                str(ROOT / "data/public/reference"),
+                str(output),
+                str(features_output),
+            )
+
+            self.assertEqual(len(ranked_keys), 8)
+
+            with output.open(encoding="utf-8", newline="") as handle:
+                rows = list(csv.DictReader(handle))
+
+            self.assertEqual(rows[0]["gene"], "TSC2")
+            self.assertEqual(rows[0]["clinical_significance"], "pathogenic")
+            self.assertIn("HP:0002465", rows[0]["matched_hpo_terms"])
+
+            with features_output.open(encoding="utf-8", newline="") as handle:
+                feature_rows = list(csv.DictReader(handle))
+
+            self.assertEqual(feature_rows[0]["allele_frequency_missing"], "1")
+
 
 if __name__ == "__main__":
     unittest.main()

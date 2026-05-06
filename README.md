@@ -28,6 +28,7 @@ future supervised variant-ranking model.
   significance, HPO overlap, and zygosity.
 - Generates a ranked CSV report with plain-language evidence.
 - Builds a self-contained HTML dashboard for visual review.
+- Includes a reproducible public-data subset built from ClinVar and HPO.
 
 ## Dashboard
 
@@ -46,6 +47,43 @@ python3 scripts/build_dashboard.py
 ```
 
 Then open `dashboard/index.html` in a browser.
+
+## Public ClinVar/HPO Data Workflow
+
+The repository includes a small real public-data subset under `data/public/`.
+It is generated from:
+
+- ClinVar GRCh38 VCF
+- HPO `genes_to_phenotype.txt`
+
+Rebuild the public subset:
+
+```bash
+python3 scripts/build_public_clinvar_dataset.py
+```
+
+Run the pipeline on the public subset:
+
+```bash
+PYTHONPATH=src python3 -m pediatric_variant_prioritizer.cli \
+  --vcf data/public/clinvar_variants.vcf \
+  --hpo data/public/patient_hpo.txt \
+  --reference-dir data/public/reference \
+  --output results/public_prioritized_variants.csv \
+  --features-output results/public_variant_features.csv
+```
+
+Build a public-data dashboard:
+
+```bash
+python3 scripts/build_dashboard.py \
+  --input results/public_prioritized_variants.csv \
+  --output dashboard/public.html
+```
+
+The public subset uses real ClinVar variants and real HPO gene-phenotype
+annotations. The patient HPO profile is still synthetic and is assembled from
+public HPO terms for demonstration.
 
 ## Baseline ML Model
 
@@ -153,6 +191,7 @@ src/pediatric_variant_prioritizer/
   vcf.py          Minimal VCF parser
 
 data/example/     Synthetic patient VCF and HPO terms
+data/public/      Small public ClinVar/HPO-derived subset
 data/reference/   Miniature ClinVar/gnomAD/HPO-style annotation tables
 dashboard/        Self-contained visual dashboard
 docs/             Beginner guide and README assets
@@ -165,10 +204,9 @@ tests/            Unit tests
 - Train a baseline classifier or ranker on labeled synthetic or public-derived
   examples.
 - Add support for VEP or SnpEff annotated VCFs.
-- Expand the reference annotation layer with public data sources.
+- Add real gnomAD allele-frequency annotation to the public workflow.
 - Add GitHub Actions for automated tests.
-- Replace the miniature demo data with a more realistic public or synthetic VCF
-  workflow.
+- Expand the baseline model beyond the tiny synthetic label set.
 
 ## Disclaimer
 
