@@ -88,7 +88,7 @@
 
     .metrics {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 14px;
     }
 
@@ -369,9 +369,14 @@
         <div class="metric-note">Transparent evidence score</div>
       </div>
       <div class="metric">
-        <div class="metric-label">Phenotype matches</div>
-        <div class="metric-value">8</div>
-        <div class="metric-note">HPO overlaps across all variants</div>
+        <div class="metric-label">Top ML probability</div>
+        <div class="metric-value">Not run</div>
+        <div class="metric-note">Pass --predictions to display model output</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">ML LOO accuracy</div>
+        <div class="metric-value">Not run</div>
+        <div class="metric-note">Pass --model-metrics to display evaluation</div>
       </div>
     </section>
 
@@ -396,7 +401,7 @@
         </div>
         <div class="stage">
           <div class="stage-title">5. Report</div>
-          <p class="stage-copy">Writes a ranked CSV with plain-language evidence for each candidate variant.</p>
+          <p class="stage-copy">Writes ranked outputs and can overlay baseline ML probabilities when available.</p>
         </div>
       </div>
     </section>
@@ -427,6 +432,7 @@
               <th>Score</th>
               <th>Consequence</th>
               <th>Clinical Significance</th>
+              <th>ML Probability</th>
               <th>Matched HPO</th>
             </tr>
           </thead>
@@ -593,6 +599,7 @@
             <td>${escapeHtml(row.score)}</td>
             <td>${escapeHtml(row.consequence)}</td>
             <td><span class="badge ${badgeClass(row.clinical_significance)}">${escapeHtml(row.clinical_significance)}</span></td>
+            <td>${formatProbability(row.ml_probability)}</td>
             <td>${escapeHtml(row.matched_hpo_terms || "none")}</td>
           </tr>
         `;
@@ -613,6 +620,7 @@
         <p><strong>Variant:</strong> ${escapeHtml(row.variant_key)}</p>
         <p><strong>Condition label:</strong> ${escapeHtml(row.condition || "not listed")}</p>
         <p><strong>Allele frequency:</strong> ${escapeHtml(row.allele_frequency || "missing")}</p>
+        <p><strong>Baseline ML probability:</strong> ${formatProbability(row.ml_probability)} ${formatMlLabel(row.ml_predicted_label)}</p>
         <p><strong>Zygosity:</strong> ${escapeHtml(row.zygosity)} | <strong>Consequence:</strong> ${escapeHtml(row.consequence)}</p>
         <p><strong>Matched patient phenotypes:</strong> ${escapeHtml(row.matched_hpo_terms || "none")}</p>
         <ul class="evidence-list">${evidenceItems(row)}</ul>
@@ -623,6 +631,20 @@
       const row = variants.find(item => item.variant_key === key) || variants[0];
       renderDetail(row);
       renderTable(row.variant_key);
+    }
+
+    function formatProbability(value) {
+      if (!value) {
+        return "not run";
+      }
+      return Number(value).toFixed(3);
+    }
+
+    function formatMlLabel(value) {
+      if (!value) {
+        return "";
+      }
+      return `(predicted label: ${escapeHtml(value)})`;
     }
 
     renderBars();

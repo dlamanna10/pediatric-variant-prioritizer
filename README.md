@@ -43,7 +43,11 @@ The dashboard in `dashboard/index.html` shows:
 Build or rebuild it after generating `results/prioritized_variants.csv`:
 
 ```bash
-python3 scripts/build_dashboard.py
+python3 scripts/build_dashboard.py \
+  --input results/prioritized_variants.csv \
+  --output dashboard/index.html \
+  --predictions results/baseline_predictions.csv \
+  --model-metrics results/baseline_model.json
 ```
 
 Then open `dashboard/index.html` in a browser.
@@ -101,6 +105,21 @@ PYTHONPATH=src python3 -m pediatric_variant_prioritizer.ml_baseline \
 The labels in `data/example/variant_labels.csv` are synthetic and exist only to
 demonstrate the machine-learning workflow. They should not be interpreted as
 clinical truth.
+
+Baseline ML outputs:
+
+- `results/baseline_predictions.csv`: per-variant predicted probabilities
+- `results/baseline_model.json`: model coefficients and evaluation metrics
+- `dashboard/index.html`: visual overlay of baseline ML probabilities and
+  leave-one-out accuracy
+
+Current demo metrics:
+
+- training accuracy: `1.000`
+- leave-one-out accuracy: `0.750`
+
+These metrics are only a smoke test of the workflow because the label set is
+tiny and synthetic.
 
 ## Quick Start
 
@@ -201,12 +220,11 @@ tests/            Unit tests
 
 ## Roadmap
 
-- Train a baseline classifier or ranker on labeled synthetic or public-derived
-  examples.
-- Add support for VEP or SnpEff annotated VCFs.
 - Add real gnomAD allele-frequency annotation to the public workflow.
-- Add GitHub Actions for automated tests.
 - Expand the baseline model beyond the tiny synthetic label set.
+- Add support for VEP or SnpEff annotated VCFs.
+- Add richer model evaluation reports and feature-importance summaries.
+- Add public-derived labels or a larger benchmark dataset for model training.
 
 ## Disclaimer
 

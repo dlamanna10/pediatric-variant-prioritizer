@@ -28,13 +28,24 @@ def main() -> None:
         default=str(OUTPUT),
         help="Output HTML dashboard path",
     )
+    parser.add_argument(
+        "--predictions",
+        help="Optional baseline ML prediction CSV to merge by variant_key",
+    )
+    parser.add_argument(
+        "--model-metrics",
+        help="Optional baseline model JSON with training metrics",
+    )
     args = parser.parse_args()
 
     input_path = Path(args.input)
     output_path = Path(args.output)
     rows = read_rows(input_path)
+    if args.predictions:
+        rows = merge_predictions(rows, read_rows(Path(args.predictions)))
+    model_metrics = read_model_metrics(Path(args.model_metrics)) if args.model_metrics else {}
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(render_dashboard(rows), encoding="utf-8")
+    output_path.write_text(render_dashboard(rows, model_metrics), encoding="utf-8")
     print(f"Wrote {output_path}")
 
 
@@ -43,7 +54,37 @@ def read_rows(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
-def render_dashboard(rows: list[dict[str, str]]) -> str:
+def merge_predictions(
+    rows: list[dict[str, str]],
+    predictions: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    predictions_by_key = {
+        row["variant_key"]: row
+        for row in predictions
+    }
+    merged: list[dict[str, str]] = []
+    for row in rows:
+        combined = dict(row)
+        prediction = predictions_by_key.get(row["variant_key"], {})
+        combined["ml_probability"] = prediction.get("predicted_probability", "")
+        combined["ml_predicted_label"] = prediction.get("predicted_label", "")
+        combined["ml_candidate_label"] = prediction.get("candidate_label", "")
+        merged.append(combined)
+    return merged
+
+
+def read_model_metrics(path: Path) -> dict[str, float]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return {
+        "training_accuracy": float(payload.get("training_accuracy", 0.0)),
+        "leave_one_out_accuracy": float(payload.get("leave_one_out_accuracy", 0.0)),
+    }
+
+
+def render_dashboard(
+    rows: list[dict[str, str]],
+    model_metrics: dict[str, float] | None = None,
+) -> str:
     payload = json.dumps(rows, indent=2)
     top = rows[0] if rows else {}
     max_score = max((float(row["score"]) for row in rows), default=0.0)
@@ -51,6 +92,33 @@ def render_dashboard(rows: list[dict[str, str]]) -> str:
     phenotype_matches = sum(
         len([term for term in row["matched_hpo_terms"].split("|") if term])
         for row in rows
+    )
+    ml_rows = [
+        row
+        for row in rows
+        if row.get("ml_probability")
+    ]
+    ml_count = len(ml_rows)
+    max_ml_probability = max(
+        (float(row["ml_probability"]) for row in ml_rows),
+        default=0.0,
+    )
+    ml_summary_value = f"{max_ml_probability:.3f}" if ml_rows else "Not run"
+    ml_summary_note = (
+        f"{ml_count} variants with baseline ML predictions"
+        if ml_rows
+        else "Pass --predictions to display model output"
+    )
+    model_metrics = model_metrics or {}
+    model_metric_value = (
+        f"{model_metrics['leave_one_out_accuracy']:.3f}"
+        if "leave_one_out_accuracy" in model_metrics
+        else "Not run"
+    )
+    model_metric_note = (
+        f"training accuracy {model_metrics['training_accuracy']:.3f}"
+        if "training_accuracy" in model_metrics
+        else "Pass --model-metrics to display evaluation"
     )
 
     return f"""<!doctype html>
@@ -143,7 +211,7 @@ def render_dashboard(rows: list[dict[str, str]]) -> str:
 
     .metrics {{
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 14px;
     }}
 
@@ -424,9 +492,14 @@ def render_dashboard(rows: list[dict[str, str]]) -> str:
         <div class="metric-note">Transparent evidence score</div>
       </div>
       <div class="metric">
-        <div class="metric-label">Phenotype matches</div>
-        <div class="metric-value">{phenotype_matches}</div>
-        <div class="metric-note">HPO overlaps across all variants</div>
+        <div class="metric-label">Top ML probability</div>
+        <div class="metric-value">{html.escape(ml_summary_value)}</div>
+        <div class="metric-note">{html.escape(ml_summary_note)}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">ML LOO accuracy</div>
+        <div class="metric-value">{html.escape(model_metric_value)}</div>
+        <div class="metric-note">{html.escape(model_metric_note)}</div>
       </div>
     </section>
 
@@ -451,7 +524,7 @@ def render_dashboard(rows: list[dict[str, str]]) -> str:
         </div>
         <div class="stage">
           <div class="stage-title">5. Report</div>
-          <p class="stage-copy">Writes a ranked CSV with plain-language evidence for each candidate variant.</p>
+          <p class="stage-copy">Writes ranked outputs and can overlay baseline ML probabilities when available.</p>
         </div>
       </div>
     </section>
@@ -482,6 +555,7 @@ def render_dashboard(rows: list[dict[str, str]]) -> str:
               <th>Score</th>
               <th>Consequence</th>
               <th>Clinical Significance</th>
+              <th>ML Probability</th>
               <th>Matched HPO</th>
             </tr>
           </thead>
@@ -543,6 +617,7 @@ def render_dashboard(rows: list[dict[str, str]]) -> str:
             <td>${{escapeHtml(row.score)}}</td>
             <td>${{escapeHtml(row.consequence)}}</td>
             <td><span class="badge ${{badgeClass(row.clinical_significance)}}">${{escapeHtml(row.clinical_significance)}}</span></td>
+            <td>${{formatProbability(row.ml_probability)}}</td>
             <td>${{escapeHtml(row.matched_hpo_terms || "none")}}</td>
           </tr>
         `;
@@ -563,6 +638,7 @@ def render_dashboard(rows: list[dict[str, str]]) -> str:
         <p><strong>Variant:</strong> ${{escapeHtml(row.variant_key)}}</p>
         <p><strong>Condition label:</strong> ${{escapeHtml(row.condition || "not listed")}}</p>
         <p><strong>Allele frequency:</strong> ${{escapeHtml(row.allele_frequency || "missing")}}</p>
+        <p><strong>Baseline ML probability:</strong> ${{formatProbability(row.ml_probability)}} ${{formatMlLabel(row.ml_predicted_label)}}</p>
         <p><strong>Zygosity:</strong> ${{escapeHtml(row.zygosity)}} | <strong>Consequence:</strong> ${{escapeHtml(row.consequence)}}</p>
         <p><strong>Matched patient phenotypes:</strong> ${{escapeHtml(row.matched_hpo_terms || "none")}}</p>
         <ul class="evidence-list">${{evidenceItems(row)}}</ul>
@@ -573,6 +649,20 @@ def render_dashboard(rows: list[dict[str, str]]) -> str:
       const row = variants.find(item => item.variant_key === key) || variants[0];
       renderDetail(row);
       renderTable(row.variant_key);
+    }}
+
+    function formatProbability(value) {{
+      if (!value) {{
+        return "not run";
+      }}
+      return Number(value).toFixed(3);
+    }}
+
+    function formatMlLabel(value) {{
+      if (!value) {{
+        return "";
+      }}
+      return `(predicted label: ${{escapeHtml(value)}})`;
     }}
 
     renderBars();

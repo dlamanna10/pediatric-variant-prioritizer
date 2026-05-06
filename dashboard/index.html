@@ -88,7 +88,7 @@
 
     .metrics {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 14px;
     }
 
@@ -369,9 +369,14 @@
         <div class="metric-note">Transparent evidence score</div>
       </div>
       <div class="metric">
-        <div class="metric-label">Phenotype matches</div>
-        <div class="metric-value">5</div>
-        <div class="metric-note">HPO overlaps across all variants</div>
+        <div class="metric-label">Top ML probability</div>
+        <div class="metric-value">0.992</div>
+        <div class="metric-note">4 variants with baseline ML predictions</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">ML LOO accuracy</div>
+        <div class="metric-value">0.750</div>
+        <div class="metric-note">training accuracy 1.000</div>
       </div>
     </section>
 
@@ -396,7 +401,7 @@
         </div>
         <div class="stage">
           <div class="stage-title">5. Report</div>
-          <p class="stage-copy">Writes a ranked CSV with plain-language evidence for each candidate variant.</p>
+          <p class="stage-copy">Writes ranked outputs and can overlay baseline ML probabilities when available.</p>
         </div>
       </div>
     </section>
@@ -427,6 +432,7 @@
               <th>Score</th>
               <th>Consequence</th>
               <th>Clinical Significance</th>
+              <th>ML Probability</th>
               <th>Matched HPO</th>
             </tr>
           </thead>
@@ -449,7 +455,10 @@
     "clinical_significance": "likely_pathogenic",
     "condition": "Tuberous sclerosis complex",
     "matched_hpo_terms": "HP:0001250|HP:0001263",
-    "evidence": "gnomAD-like AF 1e-05 adds 35 | stop_gained consequence adds 20 | ClinVar-like significance likely_pathogenic adds 25 | 2 phenotype match(es) add 16 | homozygous observation adds 5"
+    "evidence": "gnomAD-like AF 1e-05 adds 35 | stop_gained consequence adds 20 | ClinVar-like significance likely_pathogenic adds 25 | 2 phenotype match(es) add 16 | homozygous observation adds 5",
+    "ml_probability": "0.99178",
+    "ml_predicted_label": "1",
+    "ml_candidate_label": "1"
   },
   {
     "rank": "2",
@@ -462,7 +471,10 @@
     "clinical_significance": "pathogenic",
     "condition": "Developmental and epileptic encephalopathy",
     "matched_hpo_terms": "HP:0001250|HP:0001263",
-    "evidence": "gnomAD-like AF 3e-05 adds 35 | missense_variant consequence adds 10 | ClinVar-like significance pathogenic adds 35 | 2 phenotype match(es) add 16"
+    "evidence": "gnomAD-like AF 3e-05 adds 35 | missense_variant consequence adds 10 | ClinVar-like significance pathogenic adds 35 | 2 phenotype match(es) add 16",
+    "ml_probability": "0.984682",
+    "ml_predicted_label": "1",
+    "ml_candidate_label": "1"
   },
   {
     "rank": "3",
@@ -475,7 +487,10 @@
     "clinical_significance": "uncertain_significance",
     "condition": "Marfan syndrome",
     "matched_hpo_terms": "HP:0001629",
-    "evidence": "gnomAD-like AF 0.0008 adds 28 | frameshift_variant consequence adds 18 | ClinVar-like significance uncertain_significance adds 8 | 1 phenotype match(es) add 8"
+    "evidence": "gnomAD-like AF 0.0008 adds 28 | frameshift_variant consequence adds 18 | ClinVar-like significance uncertain_significance adds 8 | 1 phenotype match(es) add 8",
+    "ml_probability": "0.019519",
+    "ml_predicted_label": "0",
+    "ml_candidate_label": "0"
   },
   {
     "rank": "4",
@@ -488,7 +503,10 @@
     "clinical_significance": "benign",
     "condition": "Cystic fibrosis",
     "matched_hpo_terms": "",
-    "evidence": "gnomAD-like AF 0.12 adds -20 | ClinVar-like significance benign adds -25"
+    "evidence": "gnomAD-like AF 0.12 adds -20 | ClinVar-like significance benign adds -25",
+    "ml_probability": "0.004021",
+    "ml_predicted_label": "0",
+    "ml_candidate_label": "0"
   }
 ];
     const maxScore = 101.0;
@@ -541,6 +559,7 @@
             <td>${escapeHtml(row.score)}</td>
             <td>${escapeHtml(row.consequence)}</td>
             <td><span class="badge ${badgeClass(row.clinical_significance)}">${escapeHtml(row.clinical_significance)}</span></td>
+            <td>${formatProbability(row.ml_probability)}</td>
             <td>${escapeHtml(row.matched_hpo_terms || "none")}</td>
           </tr>
         `;
@@ -561,6 +580,7 @@
         <p><strong>Variant:</strong> ${escapeHtml(row.variant_key)}</p>
         <p><strong>Condition label:</strong> ${escapeHtml(row.condition || "not listed")}</p>
         <p><strong>Allele frequency:</strong> ${escapeHtml(row.allele_frequency || "missing")}</p>
+        <p><strong>Baseline ML probability:</strong> ${formatProbability(row.ml_probability)} ${formatMlLabel(row.ml_predicted_label)}</p>
         <p><strong>Zygosity:</strong> ${escapeHtml(row.zygosity)} | <strong>Consequence:</strong> ${escapeHtml(row.consequence)}</p>
         <p><strong>Matched patient phenotypes:</strong> ${escapeHtml(row.matched_hpo_terms || "none")}</p>
         <ul class="evidence-list">${evidenceItems(row)}</ul>
@@ -571,6 +591,20 @@
       const row = variants.find(item => item.variant_key === key) || variants[0];
       renderDetail(row);
       renderTable(row.variant_key);
+    }
+
+    function formatProbability(value) {
+      if (!value) {
+        return "not run";
+      }
+      return Number(value).toFixed(3);
+    }
+
+    function formatMlLabel(value) {
+      if (!value) {
+        return "";
+      }
+      return `(predicted label: ${escapeHtml(value)})`;
     }
 
     renderBars();
