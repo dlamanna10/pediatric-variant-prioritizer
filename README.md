@@ -1,33 +1,51 @@
 # Pediatric Variant Prioritizer
 
-A rare-disease genomics project for prioritizing candidate variants from a
-patient VCF and phenotype terms.
+An educational clinical-genomics pipeline that prioritizes rare-disease candidate
+variants from a patient VCF, phenotype terms, and lightweight annotation tables.
 
-This repository is designed as a portfolio project for clinical genomics,
-bioinformatics, and ML-adjacent roles. The first milestone is a transparent
-rules-based ranking pipeline. The next milestone is to train a supervised
-ranking model using the same feature table produced by the pipeline.
+![Dashboard preview](docs/assets/dashboard.png)
 
-## Problem
+## Why This Matters
 
-Clinical sequencing often returns many variants for one patient. The practical
-question is: which variants deserve review first?
+Clinical sequencing can return many genetic variants for one patient. Most are
+benign or unrelated to the patient's symptoms. This project demonstrates how a
+bioinformatics workflow can combine variant-level evidence, population
+frequency, clinical significance, and phenotype matching to rank variants for
+review.
 
-This project combines:
+The current version uses transparent evidence scoring rather than a trained ML
+model. That makes the reasoning inspectable and creates a clean baseline for a
+future supervised variant-ranking model.
 
-- VCF parsing
-- variant annotation
-- allele-frequency filtering
-- ClinVar-style clinical significance
-- HPO phenotype matching
-- evidence-based prioritization
-- report generation for review
+## What It Does
+
+- Parses a small VCF file containing candidate variants.
+- Loads patient phenotype terms encoded as HPO IDs.
+- Joins ClinVar-style, gnomAD-style, and gene-phenotype reference annotations.
+- Scores variants using rarity, predicted molecular consequence, clinical
+  significance, HPO overlap, and zygosity.
+- Generates a ranked CSV report with plain-language evidence.
+- Builds a self-contained HTML dashboard for visual review.
+
+## Dashboard
+
+The dashboard in `dashboard/index.html` shows:
+
+- summary metrics for the ranked variant set
+- the pipeline flow from VCF to report
+- score bars by candidate gene
+- a clickable ranked variant table
+- evidence details for each selected variant
+
+Build or rebuild it after generating `results/prioritized_variants.csv`:
+
+```bash
+python3 scripts/build_dashboard.py
+```
+
+Then open `dashboard/index.html` in a browser.
 
 ## Quick Start
-
-If you are new to genomics, start with:
-
-- `docs/beginner_guide.md`
 
 Run the example prioritization workflow:
 
@@ -45,39 +63,42 @@ Run tests:
 PYTHONPATH=src python3 -m unittest
 ```
 
-Build the visual dashboard from the generated CSV:
+If you are new to genomics, start with:
 
-```bash
-python3 scripts/build_dashboard.py
+- `docs/beginner_guide.md`
+
+## Example Output
+
+The synthetic demo ranks `TSC2` first because it combines several high-priority
+signals:
+
+- very rare gnomAD-style allele frequency
+- high-impact `stop_gained` consequence
+- `likely_pathogenic` clinical significance
+- two HPO phenotype matches
+- homozygous zygosity in the simplified example data
+
+The generated report is written to:
+
+```text
+results/prioritized_variants.csv
 ```
 
-Then open `dashboard/index.html` in a browser.
+Generated result files are intentionally ignored by git so the workflow can be
+rerun without committing local outputs.
 
-## Current Pipeline
+## Technical Highlights
 
-1. Parse a small VCF file with gene, consequence, and zygosity fields.
-2. Join reference annotations from miniature ClinVar, gnomAD, and HPO-style
-   tables.
-3. Create interpretable features for each variant.
-4. Rank variants by rarity, predicted molecular impact, known clinical
-   significance, and phenotype-gene overlap.
-5. Write a clinician-readable CSV report with evidence fields.
+- Python package layout under `src/`
+- standard-library VCF parsing for the demo format
+- dataclass-based domain models
+- CSV annotation joins
+- transparent evidence-based scoring
+- reproducible CLI workflow
+- self-contained HTML/CSS/JavaScript dashboard
+- unit tests with `unittest`
 
-## ML Roadmap
-
-The scoring system is intentionally modular. A supervised model can replace or
-augment `score_variant` once training labels are available.
-
-Good next steps:
-
-- Build a labeled training set from ClinVar pathogenic and benign variants.
-- Generate feature rows for each variant: consequence weight, allele frequency,
-  phenotype match count, ClinVar label, and gene-disease evidence.
-- Train a baseline logistic regression or gradient boosting model.
-- Compare model ranking against the transparent rules baseline.
-- Add SHAP or permutation importance for model explanations.
-
-## Project Shape
+## Project Structure
 
 ```text
 src/pediatric_variant_prioritizer/
@@ -88,12 +109,27 @@ src/pediatric_variant_prioritizer/
   scoring.py      Transparent evidence-based ranking
   vcf.py          Minimal VCF parser
 
-data/example/     Tiny synthetic patient data
-data/reference/   Tiny reference annotation tables
+data/example/     Synthetic patient VCF and HPO terms
+data/reference/   Miniature ClinVar/gnomAD/HPO-style annotation tables
+dashboard/        Self-contained visual dashboard
+docs/             Beginner guide and README assets
+scripts/          Dashboard generator
 tests/            Unit tests
 ```
 
-## Notes
+## Roadmap
 
-The example data is synthetic and intentionally small. It is suitable for
-testing the pipeline shape, not for clinical use.
+- Export an ML-ready feature table from the scoring pipeline.
+- Train a baseline classifier or ranker on labeled synthetic or public-derived
+  examples.
+- Add support for VEP or SnpEff annotated VCFs.
+- Expand the reference annotation layer with public data sources.
+- Add GitHub Actions for automated tests.
+- Replace the miniature demo data with a more realistic public or synthetic VCF
+  workflow.
+
+## Disclaimer
+
+This project is for education and portfolio demonstration only. It is not a
+medical device, not validated clinical decision support, and not suitable for
+diagnosis or patient care.
