@@ -1,5 +1,7 @@
 # Pediatric Variant Prioritizer
 
+[![Tests](https://github.com/dlamanna10/pediatric-variant-prioritizer/actions/workflows/tests.yml/badge.svg)](https://github.com/dlamanna10/pediatric-variant-prioritizer/actions/workflows/tests.yml)
+
 An educational clinical-genomics pipeline that prioritizes rare-disease candidate
 variants from a patient VCF, phenotype terms, and lightweight annotation tables.
 
