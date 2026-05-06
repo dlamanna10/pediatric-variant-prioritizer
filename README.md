@@ -45,6 +45,23 @@ python3 scripts/build_dashboard.py
 
 Then open `dashboard/index.html` in a browser.
 
+## Baseline ML Model
+
+After exporting `results/variant_features.csv`, train the small dependency-free
+baseline model:
+
+```bash
+PYTHONPATH=src python3 -m pediatric_variant_prioritizer.ml_baseline \
+  --features results/variant_features.csv \
+  --labels data/example/variant_labels.csv \
+  --model-output results/baseline_model.json \
+  --predictions-output results/baseline_predictions.csv
+```
+
+The labels in `data/example/variant_labels.csv` are synthetic and exist only to
+demonstrate the machine-learning workflow. They should not be interpreted as
+clinical truth.
+
 ## Quick Start
 
 Run the example prioritization workflow:
@@ -114,6 +131,7 @@ that a future model can learn from once a labeled training set is added.
 - dataclass-based domain models
 - CSV annotation joins
 - ML-ready feature table export
+- dependency-free logistic baseline model
 - transparent evidence-based scoring
 - reproducible CLI workflow
 - self-contained HTML/CSS/JavaScript dashboard
@@ -126,6 +144,7 @@ src/pediatric_variant_prioritizer/
   annotation.py   Load reference tables and annotate variants
   cli.py          Command-line interface
   features.py     ML-ready feature table export
+  ml_baseline.py  Dependency-free baseline ML model
   models.py       Shared dataclasses
   report.py       CSV report writer
   scoring.py      Transparent evidence-based ranking

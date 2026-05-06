@@ -10,6 +10,7 @@ authors = [
 
 [project.scripts]
 prioritize-variants = "pediatric_variant_prioritizer.cli:main"
+train-variant-baseline = "pediatric_variant_prioritizer.ml_baseline:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

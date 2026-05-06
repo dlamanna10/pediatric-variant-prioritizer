@@ -352,6 +352,15 @@ total_evidence_score: The final transparent score used for the current ranking.
 This table is not a trained model. It is the structured input that a future
 model could learn from once labels are available.
 
+The example label file is:
+
+data/example/variant_labels.csv
+
+It contains synthetic 1 or 0 labels for the demo variants. A value of 1 means
+"positive candidate for this toy workflow" and a value of 0 means "lower
+priority or negative example for this toy workflow." These labels are not
+clinical truth.
+
 ## 13. Why TSC2 Ranked First In The Example
 
 The TSC2 row ranks first because it combines several strong signals:
@@ -388,6 +397,12 @@ Possible features:
 - zygosity
 - gene-disease evidence strength
 - inheritance-model compatibility
+
+The current baseline model is a small logistic regression implemented with the
+Python standard library. It reads the feature table and synthetic labels, learns
+weights for the feature columns, and writes a JSON model plus prediction CSV.
+This is useful for demonstrating the ML workflow, but the dataset is far too
+small to make meaningful claims about performance.
 
 Good project story for interviews:
 
@@ -443,6 +458,9 @@ src/pediatric_variant_prioritizer/scoring.py: Assigns evidence-based scores.
 
 src/pediatric_variant_prioritizer/features.py: Writes ML-ready feature rows.
 
+src/pediatric_variant_prioritizer/ml_baseline.py: Trains the small baseline
+model from feature rows and synthetic labels.
+
 src/pediatric_variant_prioritizer/report.py: Writes the output CSV.
 
 src/pediatric_variant_prioritizer/cli.py: Command-line entry point.
@@ -450,6 +468,8 @@ src/pediatric_variant_prioritizer/cli.py: Command-line entry point.
 data/example/patient.vcf: Synthetic patient variant file.
 
 data/example/patient_hpo.txt: Synthetic patient phenotype terms.
+
+data/example/variant_labels.csv: Synthetic labels for the baseline ML demo.
 
 data/reference/*.csv: Tiny reference tables for the first demo.
 

@@ -1,0 +1,5 @@
+variant_key,candidate_label,label_note
+16-2097090-C-A,1,synthetic positive candidate for review
+2-166848921-G-A,1,synthetic positive candidate for review
+15-48727649-T-TA,0,synthetic lower-priority VUS example
+7-117559593-C-T,0,synthetic benign/common negative example

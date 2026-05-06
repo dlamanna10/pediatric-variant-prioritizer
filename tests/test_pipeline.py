@@ -4,6 +4,7 @@ import tempfile
 import unittest
 
 from pediatric_variant_prioritizer.cli import run
+from pediatric_variant_prioritizer.ml_baseline import run as train_baseline
 from pediatric_variant_prioritizer.scoring import rank_variants
 from pediatric_variant_prioritizer.annotation import (
     annotate_variants,
@@ -72,6 +73,41 @@ class PipelineTest(unittest.TestCase):
             self.assertEqual(rows[0]["is_homozygous"], "1")
             self.assertEqual(rows[-1]["gene"], "CFTR")
             self.assertEqual(rows[-1]["is_benign_or_likely_benign"], "1")
+
+    def test_baseline_model_trains_from_feature_table_and_labels(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "prioritized.csv"
+            features_output = Path(temp_dir) / "variant_features.csv"
+            model_output = Path(temp_dir) / "baseline_model.json"
+            predictions_output = Path(temp_dir) / "baseline_predictions.csv"
+
+            run(
+                str(ROOT / "data/example/patient.vcf"),
+                str(ROOT / "data/example/patient_hpo.txt"),
+                str(ROOT / "data/reference"),
+                str(output),
+                str(features_output),
+            )
+            result = train_baseline(
+                str(features_output),
+                str(ROOT / "data/example/variant_labels.csv"),
+                str(model_output),
+                str(predictions_output),
+            )
+
+            self.assertTrue(model_output.exists())
+            self.assertTrue(predictions_output.exists())
+            self.assertEqual(len(result.predictions), 4)
+            self.assertGreaterEqual(result.training_accuracy, 0.75)
+
+            probabilities = {
+                row["variant_key"]: row["predicted_probability"]
+                for row in result.predictions
+            }
+            self.assertGreater(
+                probabilities["16-2097090-C-A"],
+                probabilities["7-117559593-C-T"],
+            )
 
 
 if __name__ == "__main__":
