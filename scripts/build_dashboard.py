@@ -73,11 +73,12 @@ def merge_predictions(
     return merged
 
 
-def read_model_metrics(path: Path) -> dict[str, float]:
+def read_model_metrics(path: Path) -> dict[str, object]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     return {
         "training_accuracy": float(payload.get("training_accuracy", 0.0)),
         "leave_one_out_accuracy": float(payload.get("leave_one_out_accuracy", 0.0)),
+        "feature_importance": payload.get("feature_importance", []),
     }
 
 
@@ -120,6 +121,8 @@ def render_dashboard(
         if "training_accuracy" in model_metrics
         else "Pass --model-metrics to display evaluation"
     )
+    feature_importance = model_metrics.get("feature_importance", [])
+    importance_section = render_feature_importance(feature_importance)
 
     return f"""<!doctype html>
 <html lang="en">
@@ -563,6 +566,7 @@ def render_dashboard(
         </table>
       </div>
     </section>
+    {importance_section}
   </main>
 
   <script>
@@ -671,6 +675,45 @@ def render_dashboard(
 </body>
 </html>
 """
+
+
+def render_feature_importance(feature_importance: object) -> str:
+    if not isinstance(feature_importance, list) or not feature_importance:
+        return ""
+
+    rows = []
+    for item in feature_importance[:6]:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(item.get('feature', '')))}</td>"
+            f"<td>{float(item.get('coefficient', 0.0)):.3f}</td>"
+            f"<td>{html.escape(str(item.get('direction', '')))}</td>"
+            "</tr>"
+        )
+    if not rows:
+        return ""
+    return f"""
+    <section>
+      <h2>Baseline ML Feature Importance</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Coefficient</th>
+              <th>Direction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {"".join(rows)}
+          </tbody>
+        </table>
+      </div>
+      <p class="small">Higher absolute coefficients have more influence in this tiny baseline model. Positive coefficients increase predicted candidate probability.</p>
+    </section>
+    """
 
 
 if __name__ == "__main__":

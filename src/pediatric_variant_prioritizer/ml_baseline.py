@@ -38,6 +38,7 @@ class TrainingResult:
     training_accuracy: float
     leave_one_out_accuracy: float
     predictions: list[dict[str, str | float | int]]
+    feature_importance: list[dict[str, str | float]]
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -52,6 +53,10 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="Output prediction CSV path",
     )
+    parser.add_argument(
+        "--importance-output",
+        help="Optional output feature-importance CSV path",
+    )
     return parser
 
 
@@ -60,6 +65,7 @@ def run(
     labels: str,
     model_output: str,
     predictions_output: str,
+    importance_output: str | None = None,
 ) -> TrainingResult:
     feature_rows = _read_csv(Path(features))
     label_rows = _read_csv(Path(labels))
@@ -70,15 +76,19 @@ def run(
     predictions = _prediction_rows(variant_keys, targets, probabilities)
     training_accuracy = _accuracy(targets, probabilities)
     leave_one_out_accuracy = _leave_one_out_accuracy(matrix, targets)
+    feature_importance = calculate_feature_importance(model)
 
     result = TrainingResult(
         model=model,
         training_accuracy=training_accuracy,
         leave_one_out_accuracy=leave_one_out_accuracy,
         predictions=predictions,
+        feature_importance=feature_importance,
     )
     _write_model_json(result, Path(model_output))
     _write_predictions(predictions, Path(predictions_output))
+    if importance_output:
+        _write_feature_importance(feature_importance, Path(importance_output))
     return result
 
 
@@ -133,11 +143,34 @@ def main() -> None:
         args.labels,
         args.model_output,
         args.predictions_output,
+        args.importance_output,
     )
     print(f"Training accuracy: {result.training_accuracy:.3f}")
     print(f"Leave-one-out accuracy: {result.leave_one_out_accuracy:.3f}")
     print(f"Wrote model to {Path(args.model_output)}")
     print(f"Wrote predictions to {Path(args.predictions_output)}")
+    if args.importance_output:
+        print(f"Wrote feature importance to {Path(args.importance_output)}")
+
+
+def calculate_feature_importance(
+    model: LogisticModel,
+) -> list[dict[str, str | float]]:
+    rows: list[dict[str, str | float]] = []
+    for feature_name, coefficient in zip(model.feature_names, model.coefficients):
+        rows.append(
+            {
+                "feature": feature_name,
+                "coefficient": coefficient,
+                "absolute_coefficient": abs(coefficient),
+                "direction": "positive" if coefficient >= 0 else "negative",
+            }
+        )
+    return sorted(
+        rows,
+        key=lambda row: float(row["absolute_coefficient"]),
+        reverse=True,
+    )
 
 
 def _read_csv(path: Path) -> list[dict[str, str]]:
@@ -225,6 +258,7 @@ def _write_model_json(result: TrainingResult, path: Path) -> None:
         "intercept": result.model.intercept,
         "training_accuracy": result.training_accuracy,
         "leave_one_out_accuracy": result.leave_one_out_accuracy,
+        "feature_importance": result.feature_importance,
         "label_note": "Synthetic labels for workflow demonstration only",
     }
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -240,6 +274,23 @@ def _write_predictions(
         "candidate_label",
         "predicted_probability",
         "predicted_label",
+    ]
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _write_feature_importance(
+    rows: list[dict[str, str | float]],
+    path: Path,
+) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "feature",
+        "coefficient",
+        "absolute_coefficient",
+        "direction",
     ]
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)

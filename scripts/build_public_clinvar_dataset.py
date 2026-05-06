@@ -23,8 +23,9 @@ CLINVAR_VCF_URL = "https://ftp.ncbi.nlm.nih.gov/pub/clinvar/vcf_GRCh38/clinvar.v
 HPO_GENE_PHENOTYPE_URL = "http://purl.obolibrary.org/obo/hp/hpoa/genes_to_phenotype.txt"
 
 TARGET_GENES = ["SCN1A", "CFTR", "FBN1", "TSC2"]
-VARIANTS_PER_GENE = 2
-CANDIDATE_POOL_PER_GENE = 80
+POSITIVE_VARIANTS_PER_GENE = 2
+NEGATIVE_VARIANTS_PER_GENE = 1
+CANDIDATE_POOL_PER_GENE = 250
 PHENOTYPES_PER_GENE = 6
 PHENOTYPE_POOL_PER_GENE = 100
 PATIENT_PROFILE_GENES = ["SCN1A", "TSC2"]
@@ -59,6 +60,8 @@ class PublicVariant:
     consequence: str
     clinical_significance: str
     condition: str
+    allele_frequency: float | None
+    frequency_source: str
 
     @property
     def key(self) -> str:
@@ -82,8 +85,9 @@ def main() -> None:
 
     write_vcf(variants, OUTPUT_DIR / "clinvar_variants.vcf")
     write_patient_hpo(patient_terms, OUTPUT_DIR / "patient_hpo.txt")
+    write_variant_labels(variants, OUTPUT_DIR / "variant_labels.csv")
     write_clinvar_reference(variants, REFERENCE_DIR / "clinvar_mini.csv")
-    write_gnomad_reference(REFERENCE_DIR / "gnomad_mini.csv")
+    write_population_frequency_reference(variants, REFERENCE_DIR / "gnomad_mini.csv")
     write_gene_phenotype_reference(
         phenotypes,
         REFERENCE_DIR / "gene_phenotype_mini.csv",
@@ -137,6 +141,8 @@ def collect_clinvar_variants() -> list[PublicVariant]:
                         consequence=parse_consequence(parsed_info.get("MC", "")),
                         clinical_significance=clinical_significance,
                         condition=clean_condition(parsed_info.get("CLNDN", "")),
+                        allele_frequency=parse_population_frequency(parsed_info),
+                        frequency_source=parse_population_frequency_source(parsed_info),
                     )
                 )
 
@@ -259,6 +265,25 @@ def normalize_clinvar_significance(raw_significance: str) -> str:
     return "not_reported"
 
 
+def parse_population_frequency(parsed_info: dict[str, str]) -> float | None:
+    for key in ["AF_EXAC", "AF_TGP", "AF_ESP"]:
+        value = parsed_info.get(key)
+        if not value:
+            continue
+        try:
+            return float(value.split(",", 1)[0])
+        except ValueError:
+            continue
+    return None
+
+
+def parse_population_frequency_source(parsed_info: dict[str, str]) -> str:
+    for key in ["AF_EXAC", "AF_TGP", "AF_ESP"]:
+        if parsed_info.get(key):
+            return key
+    return ""
+
+
 def clean_condition(condition: str) -> str:
     if not condition:
         return ""
@@ -280,11 +305,25 @@ def select_best_variants(
 ) -> list[PublicVariant]:
     selected: dict[str, list[PublicVariant]] = {}
     for gene in TARGET_GENES:
-        selected[gene] = sorted(
-            candidates.get(gene, []),
-            key=variant_selection_score,
-            reverse=True,
-        )[:VARIANTS_PER_GENE]
+        gene_candidates = candidates.get(gene, [])
+        positives = [
+            variant
+            for variant in gene_candidates
+            if variant.clinical_significance in {"pathogenic", "likely_pathogenic"}
+        ]
+        negatives = [
+            variant
+            for variant in gene_candidates
+            if variant.clinical_significance in {"benign", "likely_benign"}
+        ]
+        selected[gene] = (
+            sorted(positives, key=variant_selection_score, reverse=True)[
+                :POSITIVE_VARIANTS_PER_GENE
+            ]
+            + sorted(negatives, key=variant_selection_score, reverse=True)[
+                :NEGATIVE_VARIANTS_PER_GENE
+            ]
+        )
     return flatten_by_target_gene(selected)
 
 
@@ -368,10 +407,47 @@ def write_clinvar_reference(variants: list[PublicVariant], path: Path) -> None:
             )
 
 
-def write_gnomad_reference(path: Path) -> None:
+def write_population_frequency_reference(
+    variants: list[PublicVariant],
+    path: Path,
+) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=["variant_key", "allele_frequency"])
         writer.writeheader()
+        for variant in variants:
+            writer.writerow(
+                {
+                    "variant_key": variant.key,
+                    "allele_frequency": (
+                        ""
+                        if variant.allele_frequency is None
+                        else variant.allele_frequency
+                    ),
+                }
+            )
+
+
+def write_variant_labels(variants: list[PublicVariant], path: Path) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=["variant_key", "candidate_label", "label_note"],
+        )
+        writer.writeheader()
+        for variant in variants:
+            if variant.clinical_significance in {"pathogenic", "likely_pathogenic"}:
+                label = 1
+            elif variant.clinical_significance in {"benign", "likely_benign"}:
+                label = 0
+            else:
+                continue
+            writer.writerow(
+                {
+                    "variant_key": variant.key,
+                    "candidate_label": label,
+                    "label_note": f"public ClinVar-derived label from {variant.clinical_significance}",
+                }
+            )
 
 
 def write_gene_phenotype_reference(
@@ -427,8 +503,10 @@ def write_source_notes(
                 "  condition fields for the selected variants",
                 "- reference/gene_phenotype_mini.csv: HPO gene-phenotype rows for the",
                 "  selected genes",
-                "- reference/gnomad_mini.csv: header-only placeholder because this",
-                "  public subset does not download gnomAD frequencies",
+                "- reference/gnomad_mini.csv: population allele frequencies from",
+                "  ClinVar's embedded AF_EXAC, AF_TGP, or AF_ESP fields when present",
+                "- variant_labels.csv: public ClinVar-derived labels for the",
+                "  baseline ML workflow",
                 "",
                 f"Selected variants: {len(variants)}",
                 f"Selected gene-phenotype rows: {len(phenotypes)}",

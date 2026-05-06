@@ -77,17 +77,32 @@ PYTHONPATH=src python3 -m pediatric_variant_prioritizer.cli \
   --features-output results/public_variant_features.csv
 ```
 
+Train the baseline model on ClinVar-derived public labels:
+
+```bash
+PYTHONPATH=src python3 -m pediatric_variant_prioritizer.ml_baseline \
+  --features results/public_variant_features.csv \
+  --labels data/public/variant_labels.csv \
+  --model-output results/public_baseline_model.json \
+  --predictions-output results/public_baseline_predictions.csv \
+  --importance-output results/public_baseline_feature_importance.csv
+```
+
 Build a public-data dashboard:
 
 ```bash
 python3 scripts/build_dashboard.py \
   --input results/public_prioritized_variants.csv \
-  --output dashboard/public.html
+  --output dashboard/public.html \
+  --predictions results/public_baseline_predictions.csv \
+  --model-metrics results/public_baseline_model.json
 ```
 
 The public subset uses real ClinVar variants and real HPO gene-phenotype
 annotations. The patient HPO profile is still synthetic and is assembled from
-public HPO terms for demonstration.
+public HPO terms for demonstration. Population allele frequencies are populated
+from ClinVar's embedded public `AF_EXAC`, `AF_TGP`, or `AF_ESP` fields when
+available.
 
 ## Baseline ML Model
 
@@ -99,7 +114,8 @@ PYTHONPATH=src python3 -m pediatric_variant_prioritizer.ml_baseline \
   --features results/variant_features.csv \
   --labels data/example/variant_labels.csv \
   --model-output results/baseline_model.json \
-  --predictions-output results/baseline_predictions.csv
+  --predictions-output results/baseline_predictions.csv \
+  --importance-output results/baseline_feature_importance.csv
 ```
 
 The labels in `data/example/variant_labels.csv` are synthetic and exist only to
@@ -110,6 +126,7 @@ Baseline ML outputs:
 
 - `results/baseline_predictions.csv`: per-variant predicted probabilities
 - `results/baseline_model.json`: model coefficients and evaluation metrics
+- `results/baseline_feature_importance.csv`: sorted coefficient importance
 - `dashboard/index.html`: visual overlay of baseline ML probabilities and
   leave-one-out accuracy
 
@@ -191,6 +208,8 @@ that a future model can learn from once a labeled training set is added.
 - CSV annotation joins
 - ML-ready feature table export
 - dependency-free logistic baseline model
+- baseline feature-importance output
+- lightweight VEP `CSQ` and SnpEff `ANN` consequence parsing
 - transparent evidence-based scoring
 - reproducible CLI workflow
 - self-contained HTML/CSS/JavaScript dashboard
@@ -220,11 +239,11 @@ tests/            Unit tests
 
 ## Roadmap
 
-- Add real gnomAD allele-frequency annotation to the public workflow.
-- Expand the baseline model beyond the tiny synthetic label set.
-- Add support for VEP or SnpEff annotated VCFs.
-- Add richer model evaluation reports and feature-importance summaries.
-- Add public-derived labels or a larger benchmark dataset for model training.
+- Add direct gnomAD frequency annotation as an optional larger-data workflow.
+- Expand model training beyond the small ClinVar-derived public subset.
+- Add richer evaluation reports, including precision/recall and calibration.
+- Add a dedicated CLI path for VEP/SnpEff annotated VCFs with header-aware field parsing.
+- Add SHAP-style explanations or permutation importance once external ML dependencies are introduced.
 
 ## Disclaimer
 

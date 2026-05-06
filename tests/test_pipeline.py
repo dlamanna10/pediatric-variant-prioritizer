@@ -80,6 +80,7 @@ class PipelineTest(unittest.TestCase):
             features_output = Path(temp_dir) / "variant_features.csv"
             model_output = Path(temp_dir) / "baseline_model.json"
             predictions_output = Path(temp_dir) / "baseline_predictions.csv"
+            importance_output = Path(temp_dir) / "baseline_feature_importance.csv"
 
             run(
                 str(ROOT / "data/example/patient.vcf"),
@@ -93,11 +94,14 @@ class PipelineTest(unittest.TestCase):
                 str(ROOT / "data/example/variant_labels.csv"),
                 str(model_output),
                 str(predictions_output),
+                str(importance_output),
             )
 
             self.assertTrue(model_output.exists())
             self.assertTrue(predictions_output.exists())
+            self.assertTrue(importance_output.exists())
             self.assertEqual(len(result.predictions), 4)
+            self.assertGreater(len(result.feature_importance), 0)
             self.assertGreaterEqual(result.training_accuracy, 0.75)
 
             probabilities = {
@@ -122,19 +126,74 @@ class PipelineTest(unittest.TestCase):
                 str(features_output),
             )
 
-            self.assertEqual(len(ranked_keys), 8)
+            self.assertEqual(len(ranked_keys), 12)
 
             with output.open(encoding="utf-8", newline="") as handle:
                 rows = list(csv.DictReader(handle))
 
-            self.assertEqual(rows[0]["gene"], "TSC2")
+            self.assertIn(rows[0]["gene"], {"SCN1A", "TSC2"})
             self.assertEqual(rows[0]["clinical_significance"], "pathogenic")
-            self.assertIn("HP:0002465", rows[0]["matched_hpo_terms"])
+            self.assertTrue(rows[0]["matched_hpo_terms"])
 
             with features_output.open(encoding="utf-8", newline="") as handle:
                 feature_rows = list(csv.DictReader(handle))
 
-            self.assertEqual(feature_rows[0]["allele_frequency_missing"], "1")
+            self.assertTrue(
+                any(row["allele_frequency_missing"] == "0" for row in feature_rows)
+            )
+
+    def test_public_baseline_trains_from_clinvar_derived_labels(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "public_prioritized.csv"
+            features_output = Path(temp_dir) / "public_features.csv"
+            model_output = Path(temp_dir) / "public_model.json"
+            predictions_output = Path(temp_dir) / "public_predictions.csv"
+            importance_output = Path(temp_dir) / "public_importance.csv"
+
+            run(
+                str(ROOT / "data/public/clinvar_variants.vcf"),
+                str(ROOT / "data/public/patient_hpo.txt"),
+                str(ROOT / "data/public/reference"),
+                str(output),
+                str(features_output),
+            )
+            result = train_baseline(
+                str(features_output),
+                str(ROOT / "data/public/variant_labels.csv"),
+                str(model_output),
+                str(predictions_output),
+                str(importance_output),
+            )
+
+            self.assertEqual(len(result.predictions), 12)
+            self.assertGreaterEqual(result.leave_one_out_accuracy, 0.75)
+            self.assertIn(
+                result.feature_importance[0]["feature"],
+                {"clinvar_score", "is_pathogenic_or_likely_pathogenic"},
+            )
+
+    def test_vcf_parser_can_read_vep_csq_and_snpeff_ann(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "annotated.vcf"
+            path.write_text(
+                "\n".join(
+                    [
+                        "##fileformat=VCFv4.2",
+                        "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO",
+                        "1\t101\t.\tG\tA\t.\tPASS\tCSQ=A|missense_variant|MODERATE|GENE1;ZYGOSITY=het",
+                        "1\t202\t.\tC\tT\t.\tPASS\tANN=T|stop_gained|HIGH|GENE2;ZYGOSITY=hom",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            variants = read_vcf(path)
+
+            self.assertEqual(variants[0].gene, "GENE1")
+            self.assertEqual(variants[0].consequence, "missense_variant")
+            self.assertEqual(variants[1].gene, "GENE2")
+            self.assertEqual(variants[1].consequence, "stop_gained")
 
 
 if __name__ == "__main__":

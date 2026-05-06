@@ -22,9 +22,11 @@ SCN1A, CFTR, FBN1, TSC2
   condition fields for the selected variants
 - reference/gene_phenotype_mini.csv: HPO gene-phenotype rows for the
   selected genes
-- reference/gnomad_mini.csv: header-only placeholder because this
-  public subset does not download gnomAD frequencies
+- reference/gnomad_mini.csv: population allele frequencies from
+  ClinVar's embedded AF_EXAC, AF_TGP, or AF_ESP fields when present
+- variant_labels.csv: public ClinVar-derived labels for the
+  baseline ML workflow
 
-Selected variants: 8
+Selected variants: 12
 Selected gene-phenotype rows: 24
 Synthetic patient HPO terms: HP:0025190, HP:0007270, HP:0002465, HP:0003774

@@ -84,8 +84,9 @@ def _load_gnomad(path: Path) -> dict[str, GnomadAnnotation]:
     rows: dict[str, GnomadAnnotation] = {}
     with path.open(encoding="utf-8", newline="") as handle:
         for row in csv.DictReader(handle):
+            raw_frequency = row["allele_frequency"]
             rows[row["variant_key"]] = GnomadAnnotation(
-                allele_frequency=float(row["allele_frequency"]),
+                allele_frequency=float(raw_frequency) if raw_frequency else None,
             )
     return rows
 

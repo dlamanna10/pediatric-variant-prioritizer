@@ -355,13 +355,13 @@
     <section class="metrics" aria-label="Dashboard summary">
       <div class="metric">
         <div class="metric-label">Variants reviewed</div>
-        <div class="metric-value">8</div>
+        <div class="metric-value">12</div>
         <div class="metric-note">Rows from prioritized_variants.csv</div>
       </div>
       <div class="metric">
         <div class="metric-label">Top candidate gene</div>
-        <div class="metric-value">TSC2</div>
-        <div class="metric-note">16-2048626-CA-C</div>
+        <div class="metric-value">SCN1A</div>
+        <div class="metric-note">2-165991366-G-GTAAT</div>
       </div>
       <div class="metric">
         <div class="metric-label">Highest score</div>
@@ -370,13 +370,13 @@
       </div>
       <div class="metric">
         <div class="metric-label">Top ML probability</div>
-        <div class="metric-value">Not run</div>
-        <div class="metric-note">Pass --predictions to display model output</div>
+        <div class="metric-value">0.993</div>
+        <div class="metric-note">12 variants with baseline ML predictions</div>
       </div>
       <div class="metric">
         <div class="metric-label">ML LOO accuracy</div>
-        <div class="metric-value">Not run</div>
-        <div class="metric-note">Pass --model-metrics to display evaluation</div>
+        <div class="metric-value">1.000</div>
+        <div class="metric-note">training accuracy 1.000</div>
       </div>
     </section>
 
@@ -440,12 +440,64 @@
         </table>
       </div>
     </section>
+    
+    <section>
+      <h2>Baseline ML Feature Importance</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Feature</th>
+              <th>Coefficient</th>
+              <th>Direction</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>is_pathogenic_or_likely_pathogenic</td><td>1.088</td><td>positive</td></tr><tr><td>is_benign_or_likely_benign</td><td>-1.088</td><td>negative</td></tr><tr><td>clinvar_score</td><td>1.088</td><td>positive</td></tr><tr><td>consequence_score</td><td>0.870</td><td>positive</td></tr><tr><td>rarity_score</td><td>-0.466</td><td>negative</td></tr><tr><td>phenotype_match_count</td><td>-0.067</td><td>negative</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small">Higher absolute coefficients have more influence in this tiny baseline model. Positive coefficients increase predicted candidate probability.</p>
+    </section>
+    
   </main>
 
   <script>
     const variants = [
   {
     "rank": "1",
+    "score": "74.0",
+    "variant_key": "2-165991366-G-GTAAT",
+    "gene": "SCN1A",
+    "consequence": "frameshift_variant",
+    "zygosity": "het",
+    "allele_frequency": "",
+    "clinical_significance": "pathogenic",
+    "condition": "Early-infantile DEE",
+    "matched_hpo_terms": "HP:0007270|HP:0025190",
+    "evidence": "missing population frequency adds 5 | frameshift_variant consequence adds 18 | ClinVar-like significance pathogenic adds 35 | 2 phenotype match(es) add 16",
+    "ml_probability": "0.991288",
+    "ml_predicted_label": "1",
+    "ml_candidate_label": "1"
+  },
+  {
+    "rank": "2",
+    "score": "74.0",
+    "variant_key": "2-165991479-CT-C",
+    "gene": "SCN1A",
+    "consequence": "frameshift_variant",
+    "zygosity": "het",
+    "allele_frequency": "",
+    "clinical_significance": "pathogenic",
+    "condition": "Early-infantile DEE",
+    "matched_hpo_terms": "HP:0007270|HP:0025190",
+    "evidence": "missing population frequency adds 5 | frameshift_variant consequence adds 18 | ClinVar-like significance pathogenic adds 35 | 2 phenotype match(es) add 16",
+    "ml_probability": "0.991288",
+    "ml_predicted_label": "1",
+    "ml_candidate_label": "1"
+  },
+  {
+    "rank": "3",
     "score": "74.0",
     "variant_key": "16-2048626-CA-C",
     "gene": "TSC2",
@@ -455,10 +507,13 @@
     "clinical_significance": "pathogenic",
     "condition": "Tuberous sclerosis 2",
     "matched_hpo_terms": "HP:0002465|HP:0003774",
-    "evidence": "missing population frequency adds 5 | frameshift_variant consequence adds 18 | ClinVar-like significance pathogenic adds 35 | 2 phenotype match(es) add 16"
+    "evidence": "missing population frequency adds 5 | frameshift_variant consequence adds 18 | ClinVar-like significance pathogenic adds 35 | 2 phenotype match(es) add 16",
+    "ml_probability": "0.991288",
+    "ml_predicted_label": "1",
+    "ml_candidate_label": "1"
   },
   {
-    "rank": "2",
+    "rank": "4",
     "score": "74.0",
     "variant_key": "16-2048629-C-CA",
     "gene": "TSC2",
@@ -468,85 +523,138 @@
     "clinical_significance": "pathogenic",
     "condition": "Tuberous sclerosis 2",
     "matched_hpo_terms": "HP:0002465|HP:0003774",
-    "evidence": "missing population frequency adds 5 | frameshift_variant consequence adds 18 | ClinVar-like significance pathogenic adds 35 | 2 phenotype match(es) add 16"
-  },
-  {
-    "rank": "3",
-    "score": "66.0",
-    "variant_key": "2-165991287-T-G",
-    "gene": "SCN1A",
-    "consequence": "missense_variant",
-    "zygosity": "het",
-    "allele_frequency": "",
-    "clinical_significance": "pathogenic",
-    "condition": "Early-infantile DEE",
-    "matched_hpo_terms": "HP:0007270|HP:0025190",
-    "evidence": "missing population frequency adds 5 | missense_variant consequence adds 10 | ClinVar-like significance pathogenic adds 35 | 2 phenotype match(es) add 16"
-  },
-  {
-    "rank": "4",
-    "score": "66.0",
-    "variant_key": "2-165991298-T-C",
-    "gene": "SCN1A",
-    "consequence": "missense_variant",
-    "zygosity": "het",
-    "allele_frequency": "",
-    "clinical_significance": "pathogenic",
-    "condition": "Early-infantile DEE",
-    "matched_hpo_terms": "HP:0007270|HP:0025190",
-    "evidence": "missing population frequency adds 5 | missense_variant consequence adds 10 | ClinVar-like significance pathogenic adds 35 | 2 phenotype match(es) add 16"
+    "evidence": "missing population frequency adds 5 | frameshift_variant consequence adds 18 | ClinVar-like significance pathogenic adds 35 | 2 phenotype match(es) add 16",
+    "ml_probability": "0.991288",
+    "ml_predicted_label": "1",
+    "ml_candidate_label": "1"
   },
   {
     "rank": "5",
-    "score": "48.0",
-    "variant_key": "15-48410998-GC-G",
-    "gene": "FBN1",
+    "score": "58.0",
+    "variant_key": "7-117480081-GCGCCCGAGAGACCATGCAGAGGT-G",
+    "gene": "CFTR",
     "consequence": "frameshift_variant",
     "zygosity": "het",
     "allele_frequency": "",
-    "clinical_significance": "likely_pathogenic",
-    "condition": "Familial thoracic aortic aneurysm and aortic dissection",
+    "clinical_significance": "pathogenic",
+    "condition": "CFTR-related disorder",
     "matched_hpo_terms": "",
-    "evidence": "missing population frequency adds 5 | frameshift_variant consequence adds 18 | ClinVar-like significance likely_pathogenic adds 25"
+    "evidence": "missing population frequency adds 5 | frameshift_variant consequence adds 18 | ClinVar-like significance pathogenic adds 35",
+    "ml_probability": "0.993315",
+    "ml_predicted_label": "1",
+    "ml_candidate_label": "1"
   },
   {
     "rank": "6",
-    "score": "48.0",
-    "variant_key": "15-48410999-CAA-C",
-    "gene": "FBN1",
-    "consequence": "frameshift_variant",
-    "zygosity": "het",
-    "allele_frequency": "",
-    "clinical_significance": "likely_pathogenic",
-    "condition": "Marfan syndrome",
-    "matched_hpo_terms": "",
-    "evidence": "missing population frequency adds 5 | frameshift_variant consequence adds 18 | ClinVar-like significance likely_pathogenic adds 25"
-  },
-  {
-    "rank": "7",
-    "score": "40.0",
-    "variant_key": "7-117478787-A-G",
+    "score": "58.0",
+    "variant_key": "7-117480097-GC-G",
     "gene": "CFTR",
-    "consequence": "unknown",
+    "consequence": "frameshift_variant",
     "zygosity": "het",
     "allele_frequency": "",
     "clinical_significance": "pathogenic",
     "condition": "Cystic fibrosis",
     "matched_hpo_terms": "",
-    "evidence": "missing population frequency adds 5 | ClinVar-like significance pathogenic adds 35"
+    "evidence": "missing population frequency adds 5 | frameshift_variant consequence adds 18 | ClinVar-like significance pathogenic adds 35",
+    "ml_probability": "0.993315",
+    "ml_predicted_label": "1",
+    "ml_candidate_label": "1"
   },
   {
-    "rank": "8",
-    "score": "40.0",
-    "variant_key": "7-117479051-C-CT",
-    "gene": "CFTR",
-    "consequence": "unknown",
+    "rank": "7",
+    "score": "58.0",
+    "variant_key": "15-48411006-TG-T",
+    "gene": "FBN1",
+    "consequence": "frameshift_variant",
     "zygosity": "het",
     "allele_frequency": "",
     "clinical_significance": "pathogenic",
-    "condition": "Hereditary pancreatitis",
+    "condition": "See cases",
     "matched_hpo_terms": "",
-    "evidence": "missing population frequency adds 5 | ClinVar-like significance pathogenic adds 35"
+    "evidence": "missing population frequency adds 5 | frameshift_variant consequence adds 18 | ClinVar-like significance pathogenic adds 35",
+    "ml_probability": "0.993315",
+    "ml_predicted_label": "1",
+    "ml_candidate_label": "1"
+  },
+  {
+    "rank": "8",
+    "score": "58.0",
+    "variant_key": "15-48411029-AC-A",
+    "gene": "FBN1",
+    "consequence": "frameshift_variant",
+    "zygosity": "het",
+    "allele_frequency": "",
+    "clinical_significance": "pathogenic",
+    "condition": "Familial thoracic aortic aneurysm and aortic dissection",
+    "matched_hpo_terms": "",
+    "evidence": "missing population frequency adds 5 | frameshift_variant consequence adds 18 | ClinVar-like significance pathogenic adds 35",
+    "ml_probability": "0.993315",
+    "ml_predicted_label": "1",
+    "ml_candidate_label": "1"
+  },
+  {
+    "rank": "9",
+    "score": "46.0",
+    "variant_key": "16-2048628-A-G",
+    "gene": "TSC2",
+    "consequence": "missense_variant",
+    "zygosity": "het",
+    "allele_frequency": "8e-05",
+    "clinical_significance": "likely_benign",
+    "condition": "Tuberous sclerosis 2",
+    "matched_hpo_terms": "HP:0002465|HP:0003774",
+    "evidence": "gnomAD-like AF 8e-05 adds 35 | missense_variant consequence adds 10 | ClinVar-like significance likely_benign adds -15 | 2 phenotype match(es) add 16",
+    "ml_probability": "0.007814",
+    "ml_predicted_label": "0",
+    "ml_candidate_label": "0"
+  },
+  {
+    "rank": "10",
+    "score": "23.0",
+    "variant_key": "15-48411064-T-G",
+    "gene": "FBN1",
+    "consequence": "missense_variant",
+    "zygosity": "het",
+    "allele_frequency": "0.00017",
+    "clinical_significance": "likely_benign",
+    "condition": "Familial thoracic aortic aneurysm and aortic dissection",
+    "matched_hpo_terms": "",
+    "evidence": "gnomAD-like AF 0.00017 adds 28 | missense_variant consequence adds 10 | ClinVar-like significance likely_benign adds -15",
+    "ml_probability": "0.014062",
+    "ml_predicted_label": "0",
+    "ml_candidate_label": "0"
+  },
+  {
+    "rank": "11",
+    "score": "16.0",
+    "variant_key": "2-165991285-T-C",
+    "gene": "SCN1A",
+    "consequence": "missense_variant",
+    "zygosity": "het",
+    "allele_frequency": "",
+    "clinical_significance": "likely_benign",
+    "condition": "Early-infantile DEE",
+    "matched_hpo_terms": "HP:0007270|HP:0025190",
+    "evidence": "missing population frequency adds 5 | missense_variant consequence adds 10 | ClinVar-like significance likely_benign adds -15 | 2 phenotype match(es) add 16",
+    "ml_probability": "0.030999",
+    "ml_predicted_label": "0",
+    "ml_candidate_label": "0"
+  },
+  {
+    "rank": "12",
+    "score": "-10.0",
+    "variant_key": "7-117480101-A-C",
+    "gene": "CFTR",
+    "consequence": "synonymous_variant",
+    "zygosity": "het",
+    "allele_frequency": "",
+    "clinical_significance": "likely_benign",
+    "condition": "Cystic fibrosis",
+    "matched_hpo_terms": "",
+    "evidence": "missing population frequency adds 5 | ClinVar-like significance likely_benign adds -15",
+    "ml_probability": "0.008631",
+    "ml_predicted_label": "0",
+    "ml_candidate_label": "0"
   }
 ];
     const maxScore = 74.0;

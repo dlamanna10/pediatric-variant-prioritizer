@@ -381,8 +381,9 @@ Important distinction:
 - the variants come from public ClinVar
 - the gene-phenotype rows come from public HPO
 - the patient HPO profile is synthetic, assembled from public HPO terms
-- gnomAD frequencies are not downloaded in this public subset, so allele
-  frequency is treated as missing
+- population allele frequencies are filled from ClinVar's embedded AF_EXAC,
+  AF_TGP, or AF_ESP fields when available
+- variant labels are derived from ClinVar significance for the baseline ML demo
 
 This makes the workflow more realistic than the tiny hand-written demo while
 still keeping the repository small enough to run quickly.
@@ -426,9 +427,10 @@ Possible features:
 
 The current baseline model is a small logistic regression implemented with the
 Python standard library. It reads the feature table and synthetic labels, learns
-weights for the feature columns, and writes a JSON model plus prediction CSV.
-This is useful for demonstrating the ML workflow, but the dataset is far too
-small to make meaningful claims about performance.
+weights for the feature columns, and writes a JSON model, prediction CSV, and
+feature-importance CSV. The public workflow can also train on ClinVar-derived
+labels. This is useful for demonstrating the ML workflow, but the datasets are
+still too small to make clinical performance claims.
 
 Good project story for interviews:
 
@@ -443,14 +445,14 @@ pipelines need much more.
 
 Next upgrades:
 
-- accept VCF annotations from Ensembl VEP or SnpEff
+- improve VEP/SnpEff support with header-aware field parsing
 - add inheritance model logic using parents or family trios
 - add gene-disease validity resources
-- use full ClinVar and gnomAD data
+- add a direct optional gnomAD frequency workflow
 - support copy number variants and structural variants
 - add quality-control filters
 - add a Streamlit dashboard
-- train an ML model on a labeled dataset
+- expand the ML model beyond the small demo and public-derived label sets
 - add citations and audit trails for every evidence item
 
 ## 17. Common Pitfalls

@@ -1,0 +1,13 @@
+variant_key,candidate_label,label_note
+2-165991366-G-GTAAT,1,public ClinVar-derived label from pathogenic
+2-165991479-CT-C,1,public ClinVar-derived label from pathogenic
+2-165991285-T-C,0,public ClinVar-derived label from likely_benign
+7-117480081-GCGCCCGAGAGACCATGCAGAGGT-G,1,public ClinVar-derived label from pathogenic
+7-117480097-GC-G,1,public ClinVar-derived label from pathogenic
+7-117480101-A-C,0,public ClinVar-derived label from likely_benign
+15-48411006-TG-T,1,public ClinVar-derived label from pathogenic
+15-48411029-AC-A,1,public ClinVar-derived label from pathogenic
+15-48411064-T-G,0,public ClinVar-derived label from likely_benign
+16-2048626-CA-C,1,public ClinVar-derived label from pathogenic
+16-2048629-C-CA,1,public ClinVar-derived label from pathogenic
+16-2048628-A-G,0,public ClinVar-derived label from likely_benign
