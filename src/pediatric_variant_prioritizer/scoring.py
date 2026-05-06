@@ -39,7 +39,7 @@ def score_variant(annotated: AnnotatedVariant) -> AnnotatedVariant:
     evidence: list[str] = []
     score = 0.0
 
-    rarity_score = _rarity_score(annotated.gnomad.allele_frequency)
+    rarity_score = calculate_rarity_score(annotated.gnomad.allele_frequency)
     score += rarity_score
     evidence.append(_rarity_evidence(annotated.gnomad.allele_frequency, rarity_score))
 
@@ -72,7 +72,7 @@ def score_variant(annotated: AnnotatedVariant) -> AnnotatedVariant:
     return replace(annotated, score=score, evidence=tuple(evidence))
 
 
-def _rarity_score(allele_frequency: float | None) -> float:
+def calculate_rarity_score(allele_frequency: float | None) -> float:
     if allele_frequency is None:
         return 5
     if allele_frequency <= 0.0001:

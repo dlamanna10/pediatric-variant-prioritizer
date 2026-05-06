@@ -54,7 +54,8 @@ PYTHONPATH=src python3 -m pediatric_variant_prioritizer.cli \
   --vcf data/example/patient.vcf \
   --hpo data/example/patient_hpo.txt \
   --reference-dir data/reference \
-  --output results/prioritized_variants.csv
+  --output results/prioritized_variants.csv \
+  --features-output results/variant_features.csv
 ```
 
 Run tests:
@@ -87,12 +88,32 @@ results/prioritized_variants.csv
 Generated result files are intentionally ignored by git so the workflow can be
 rerun without committing local outputs.
 
+## ML-Ready Feature Table
+
+The optional `--features-output` argument writes one feature row per ranked
+variant. This table is designed as the next step toward supervised modeling.
+
+Example columns include:
+
+- `allele_frequency`
+- `rarity_score`
+- `consequence_score`
+- `clinvar_score`
+- `phenotype_match_count`
+- `phenotype_match_score`
+- `is_homozygous`
+- `total_evidence_score`
+
+The current table does not claim clinical labels. It prepares structured inputs
+that a future model can learn from once a labeled training set is added.
+
 ## Technical Highlights
 
 - Python package layout under `src/`
 - standard-library VCF parsing for the demo format
 - dataclass-based domain models
 - CSV annotation joins
+- ML-ready feature table export
 - transparent evidence-based scoring
 - reproducible CLI workflow
 - self-contained HTML/CSS/JavaScript dashboard
@@ -104,6 +125,7 @@ rerun without committing local outputs.
 src/pediatric_variant_prioritizer/
   annotation.py   Load reference tables and annotate variants
   cli.py          Command-line interface
+  features.py     ML-ready feature table export
   models.py       Shared dataclasses
   report.py       CSV report writer
   scoring.py      Transparent evidence-based ranking
@@ -119,7 +141,6 @@ tests/            Unit tests
 
 ## Roadmap
 
-- Export an ML-ready feature table from the scoring pipeline.
 - Train a baseline classifier or ranker on labeled synthetic or public-derived
   examples.
 - Add support for VEP or SnpEff annotated VCFs.

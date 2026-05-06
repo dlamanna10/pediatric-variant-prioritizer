@@ -319,7 +319,40 @@ phenotype terms.
 
 evidence: Plain-language reasons for the score.
 
-## 12. Why TSC2 Ranked First In The Example
+## 12. Reading variant_features.csv
+
+The optional ML-ready feature table is:
+
+results/variant_features.csv
+
+This file has one row per variant, but it is shaped for modeling instead of
+human review.
+
+Important columns:
+
+allele_frequency: Population frequency as a numeric feature.
+
+allele_frequency_missing: 1 if the frequency is missing, otherwise 0.
+
+rarity_score: Numeric summary of how rare the variant is.
+
+consequence_score: Numeric summary of predicted molecular impact.
+
+clinvar_score: Numeric summary of the ClinVar-like significance label.
+
+phenotype_match_count: Number of patient HPO terms that match the gene's known
+phenotype terms.
+
+phenotype_match_score: Numeric score derived from phenotype matches.
+
+is_homozygous: 1 if the simplified zygosity field is homozygous, otherwise 0.
+
+total_evidence_score: The final transparent score used for the current ranking.
+
+This table is not a trained model. It is the structured input that a future
+model could learn from once labels are available.
+
+## 13. Why TSC2 Ranked First In The Example
 
 The TSC2 row ranks first because it combines several strong signals:
 
@@ -332,7 +365,7 @@ The TSC2 row ranks first because it combines several strong signals:
 That does not mean this synthetic example is a real diagnosis. It means the row
 is a good candidate for review according to the evidence rules.
 
-## 13. Where Machine Learning Fits
+## 14. Where Machine Learning Fits
 
 Right now, the project uses hand-written scoring rules. Machine learning can be
 added once there is a labeled training dataset.
@@ -362,7 +395,7 @@ I first built a transparent clinical-genomics baseline. Then I used the same
 feature table to train and evaluate an ML ranker, while keeping explanations
 available for review.
 
-## 14. What Would Make This More Real
+## 15. What Would Make This More Real
 
 The current project is a miniature educational version. Real clinical genomics
 pipelines need much more.
@@ -379,7 +412,7 @@ Next upgrades:
 - train an ML model on a labeled dataset
 - add citations and audit trails for every evidence item
 
-## 15. Common Pitfalls
+## 16. Common Pitfalls
 
 High score does not equal diagnosis.
 
@@ -397,7 +430,7 @@ Reference databases change over time. A real system needs version tracking.
 Population frequency must be interpreted carefully because datasets may not
 represent every ancestry equally.
 
-## 16. Project File Map
+## 17. Project File Map
 
 README.md: Project overview and quick-start commands.
 
@@ -407,6 +440,8 @@ src/pediatric_variant_prioritizer/annotation.py: Loads reference tables and
 adds annotations to variants.
 
 src/pediatric_variant_prioritizer/scoring.py: Assigns evidence-based scores.
+
+src/pediatric_variant_prioritizer/features.py: Writes ML-ready feature rows.
 
 src/pediatric_variant_prioritizer/report.py: Writes the output CSV.
 
@@ -423,7 +458,9 @@ variants.
 
 results/prioritized_variants.csv: Generated ranked report.
 
-## 17. Source References
+results/variant_features.csv: Generated ML-ready feature table.
+
+## 18. Source References
 
 ClinVar, NCBI:
 https://www.ncbi.nlm.nih.gov/clinvar/

@@ -6,6 +6,7 @@ import argparse
 from pathlib import Path
 
 from .annotation import annotate_variants, load_reference_data, read_patient_hpo
+from .features import write_feature_table
 from .report import write_csv_report
 from .scoring import rank_variants
 from .vcf import read_vcf
@@ -23,24 +24,44 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory containing miniature reference CSV files",
     )
     parser.add_argument("--output", required=True, help="Output CSV report path")
+    parser.add_argument(
+        "--features-output",
+        help="Optional output path for an ML-ready feature table",
+    )
     return parser
 
 
-def run(vcf: str, hpo: str, reference_dir: str, output: str) -> list[str]:
+def run(
+    vcf: str,
+    hpo: str,
+    reference_dir: str,
+    output: str,
+    features_output: str | None = None,
+) -> list[str]:
     variants = read_vcf(vcf)
     patient_hpo_terms = read_patient_hpo(hpo)
     references = load_reference_data(reference_dir)
     annotated = annotate_variants(variants, references, patient_hpo_terms)
     ranked = rank_variants(annotated)
     write_csv_report(ranked, output)
+    if features_output:
+        write_feature_table(ranked, features_output)
     return [variant.variant.key for variant in ranked]
 
 
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
-    ranked_keys = run(args.vcf, args.hpo, args.reference_dir, args.output)
+    ranked_keys = run(
+        args.vcf,
+        args.hpo,
+        args.reference_dir,
+        args.output,
+        args.features_output,
+    )
     print(f"Wrote {len(ranked_keys)} prioritized variants to {Path(args.output)}")
+    if args.features_output:
+        print(f"Wrote ML-ready features to {Path(args.features_output)}")
 
 
 if __name__ == "__main__":

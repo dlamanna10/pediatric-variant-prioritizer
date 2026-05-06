@@ -48,6 +48,31 @@ class PipelineTest(unittest.TestCase):
             self.assertEqual(rows[0]["gene"], "TSC2")
             self.assertEqual(rows[0]["rank"], "1")
 
+    def test_cli_can_write_ml_ready_feature_table(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "prioritized.csv"
+            features_output = Path(temp_dir) / "variant_features.csv"
+
+            run(
+                str(ROOT / "data/example/patient.vcf"),
+                str(ROOT / "data/example/patient_hpo.txt"),
+                str(ROOT / "data/reference"),
+                str(output),
+                str(features_output),
+            )
+
+            self.assertTrue(features_output.exists())
+
+            with features_output.open(encoding="utf-8", newline="") as handle:
+                rows = list(csv.DictReader(handle))
+
+            self.assertEqual(len(rows), 4)
+            self.assertEqual(rows[0]["gene"], "TSC2")
+            self.assertEqual(rows[0]["phenotype_match_count"], "2")
+            self.assertEqual(rows[0]["is_homozygous"], "1")
+            self.assertEqual(rows[-1]["gene"], "CFTR")
+            self.assertEqual(rows[-1]["is_benign_or_likely_benign"], "1")
+
 
 if __name__ == "__main__":
     unittest.main()
