@@ -27,7 +27,6 @@ This project combines:
 
 If you are new to genomics, start with:
 
-- `docs/pediatric_variant_prioritizer_beginner_guide.pdf`
 - `docs/beginner_guide.md`
 
 Run the example prioritization workflow:
